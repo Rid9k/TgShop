@@ -10,8 +10,16 @@ document.documentElement.style.setProperty('--tg-theme-button-color', '#2ea043')
 document.documentElement.style.setProperty('--tg-theme-button-text-color', '#ffffff');
 document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', '#161b22');
 
-// Данные товаров
-const products = [
+// URL API (замените на ваш URL после деплоя)
+// Для локального тестирования: "http://localhost:8000"
+// Для продакшена: "https://your-app.onrender.com"
+const API_URL = "http://localhost:8000";
+
+// Данные товаров (загружаются с API или используются локальные)
+let products = [];
+
+// Локальные товары (резерв, если API недоступен)
+const defaultProducts = [
     {
         id: 1,
         title: "Куртка зимняя",
@@ -154,27 +162,54 @@ const cartCount = document.getElementById('cartCount');
 const productModal = document.getElementById('productModal');
 const cartModal = document.getElementById('cartModal');
 
+// Загрузка товаров с API
+async function loadProducts() {
+    try {
+        console.log('Загрузка товаров из API:', API_URL);
+        const response = await fetch(`${API_URL}/products`);
+        if (response.ok) {
+            const data = await response.json();
+            products = data.products || [];
+            console.log('Загружено товаров:', products.length);
+        } else {
+            console.warn('API вернул ошибку, используем локальные товары');
+            products = defaultProducts;
+        }
+    } catch (error) {
+        console.error('API недоступен:', error);
+        console.log('Используем локальные товары');
+        products = defaultProducts;
+    }
+    renderProducts();
+}
+
 // Отображение товаров
 function renderProducts(filterText = '') {
     productsGrid.innerHTML = '';
-    
+
     const filtered = products.filter(product => {
         const matchesCategory = currentCategory === 'all' || product.category === currentCategory;
         const matchesSearch = product.title.toLowerCase().includes(filterText.toLowerCase());
         return matchesCategory && matchesSearch;
     });
-    
+
     if (filtered.length === 0) {
         productsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; opacity: 0.6;">Товары не найдены</p>';
         return;
     }
-    
+
     filtered.forEach(product => {
         const card = document.createElement('div');
         card.className = 'product-card';
         card.onclick = () => openProductModal(product);
+        
+        const stockBadge = product.in_stock ? '' : '<div style="position:absolute;top:8px;right:8px;background:#ff4444;color:white;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:bold;">НЕТ</div>';
+        
         card.innerHTML = `
-            <img src="${product.image}" alt="${product.title}" class="product-image" onerror="this.src='https://via.placeholder.com/400x300?text=No+Image'">
+            <div style="position:relative">
+                <img src="${product.image}" alt="${product.title}" class="product-image" onerror="this.src='https://via.placeholder.com/400x300?text=No+Image'">
+                ${stockBadge}
+            </div>
             <div class="product-info">
                 <div class="product-title">${product.title}</div>
                 <div class="product-price">${product.price.toLocaleString()} ₽</div>
@@ -203,25 +238,27 @@ searchInput.addEventListener('input', (e) => {
 function openProductModal(product) {
     selectedProduct = product;
     selectedSize = null;
-    
-    document.getElementById('modalImage').src = product.image;
+
+    document.getElementById('modalImage').src = product.image || 'https://via.placeholder.com/400x300';
     document.getElementById('modalImage').onerror = function() {
         this.src = 'https://via.placeholder.com/400x300?text=No+Image';
     };
     document.getElementById('modalTitle').textContent = product.title;
     document.getElementById('modalPrice').textContent = `${product.price.toLocaleString()} ₽`;
-    document.getElementById('modalDescription').textContent = product.description;
-    
+    document.getElementById('modalDescription').textContent = product.description || '';
+
     const sizeSelector = document.getElementById('sizeSelector');
     sizeSelector.innerHTML = '';
-    product.sizes.forEach(size => {
+    
+    const sizes = product.sizes || ["S", "M", "L", "XL"];
+    sizes.forEach(size => {
         const btn = document.createElement('button');
         btn.className = 'size-btn';
         btn.textContent = size;
         btn.onclick = () => selectSize(size, btn);
         sizeSelector.appendChild(btn);
     });
-    
+
     productModal.style.display = 'block';
 }
 
@@ -246,12 +283,12 @@ function addToCart() {
         tg.showAlert('Пожалуйста, выберите размер');
         return;
     }
-    
+
     cart.push({
         ...selectedProduct,
         selectedSize
     });
-    
+
     updateCartCount();
     closeModal();
     tg.showNotification({
@@ -272,7 +309,7 @@ function updateCartCount() {
 // Открытие корзины
 function showCart() {
     const cartItems = document.getElementById('cartItems');
-    
+
     if (cart.length === 0) {
         cartItems.innerHTML = '<p class="empty-cart">Корзина пуста</p>';
     } else {
@@ -288,10 +325,10 @@ function showCart() {
             </div>
         `).join('');
     }
-    
+
     const total = cart.reduce((sum, item) => sum + item.price, 0);
     document.getElementById('cartTotal').textContent = total.toLocaleString();
-    
+
     cartModal.style.display = 'block';
 }
 
@@ -313,24 +350,24 @@ function checkout() {
         tg.showAlert('Корзина пуста');
         return;
     }
-    
+
     const total = cart.reduce((sum, item) => sum + item.price, 0);
     const orderText = cart.map(item => `${item.title} (${item.selectedSize}) - ${item.price.toLocaleString()} ₽`).join('\n');
-    
+
     const message = `🛒 Новый заказ:\n\n${orderText}\n\n💰 Итого: ${total.toLocaleString()} ₽`;
-    
+
     // Отправка данных боту
     tg.sendData(JSON.stringify({
         type: 'order',
         items: cart,
         total: total
     }));
-    
+
     // Очистка корзины
     cart = [];
     updateCartCount();
     closeCart();
-    
+
     tg.showConfirm(`Заказ оформлен!\n\n${message}\n\nМенеджер свяжется с вами в ближайшее время.`);
 }
 
@@ -341,5 +378,5 @@ window.onclick = (event) => {
 };
 
 // Инициализация
-renderProducts();
+loadProducts();
 updateCartCount();
