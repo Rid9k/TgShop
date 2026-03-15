@@ -12,13 +12,15 @@ document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', '#16
 
 // URL API (замените на ваш URL после деплоя)
 // Для локального тестирования: "http://localhost:8000"
-// Для продакшена: "https://your-app.onrender.com"
+// Для продакшена на Render: "https://your-app.onrender.com"
+
+// ВРЕМЕННО ОТКЛЮЧЕНО — используем только defaultProducts
 const API_URL = "http://91.197.99.231:8000";
 
 // Данные товаров (загружаются с API или используются локальные)
 let products = [];
 
-// Локальные товары (резерв, если API недоступен)
+// Локальные товары (основные данные из БД)
 const defaultProducts = [
     {
         id: 1,
@@ -26,8 +28,9 @@ const defaultProducts = [
         price: 12990,
         category: "tops",
         image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400",
-        description: "Тёплая зимняя куртка с капюшоном. Водонепроницаемая ткань, утеплитель до -30°C.",
-        sizes: ["S", "M", "L", "XL"]
+        description: "Тёплая зимняя куртка с капюшоном",
+        sizes: ["S", "M", "L", "XL"],
+        in_stock: true
     },
     {
         id: 2,
@@ -35,8 +38,9 @@ const defaultProducts = [
         price: 1990,
         category: "tops",
         image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400",
-        description: "Классическая хлопковая футболка. Идеально подходит для повседневной носки.",
-        sizes: ["XS", "S", "M", "L", "XL"]
+        description: "Классическая хлопковая футболка",
+        sizes: ["XS", "S", "M", "L", "XL"],
+        in_stock: true
     },
     {
         id: 3,
@@ -44,8 +48,9 @@ const defaultProducts = [
         price: 4990,
         category: "bottoms",
         image: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400",
-        description: "Узкие джинсы с высокой посадкой. Эластичный деним для комфорта.",
-        sizes: ["25", "26", "27", "28", "29", "30"]
+        description: "Узкие джинсы с высокой посадкой",
+        sizes: ["25", "26", "27", "28", "29", "30"],
+        in_stock: true
     },
     {
         id: 4,
@@ -53,98 +58,29 @@ const defaultProducts = [
         price: 8990,
         category: "shoes",
         image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-        description: "Стильные городские кроссовки. Дышащая сетка, амортизирующая подошва.",
-        sizes: ["36", "37", "38", "39", "40", "41", "42"]
+        description: "Стильные городские кроссовки",
+        sizes: ["36", "37", "38", "39", "40", "41", "42"],
+        in_stock: true
     },
     {
         id: 5,
-        title: "Свитер оверсайз",
-        price: 5490,
-        category: "tops",
-        image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400",
-        description: "Объёмный свитер из мягкой пряжи. Уютный выбор для холодных дней.",
-        sizes: ["S", "M", "L"]
-    },
-    {
-        id: 6,
-        title: "Брюки классические",
-        price: 3990,
-        category: "bottoms",
-        image: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400",
-        description: "Элегантные брюки со стрелками. Подходят для офиса и официальных мероприятий.",
-        sizes: ["42", "44", "46", "48", "50"]
-    },
-    {
-        id: 7,
-        title: "Кеды классические",
-        price: 5990,
-        category: "shoes",
-        image: "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=400",
-        description: "Классические белые кеды. Натуральная кожа, минималистичный дизайн.",
-        sizes: ["36", "37", "38", "39", "40", "41"]
-    },
-    {
-        id: 8,
-        title: "Шарф кашемировый",
-        price: 2990,
-        category: "accessories",
-        image: "https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?w=400",
-        description: "Мягкий кашемировый шарф. Роскошный аксессуар для холодного сезона.",
-        sizes: ["One Size"]
-    },
-    {
-        id: 9,
-        title: "Платье миди",
-        price: 6990,
-        category: "tops",
-        image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400",
-        description: "Элегантное платье миди. Подчёркивает силуэт, подходит для любых случаев.",
-        sizes: ["XS", "S", "M", "L"]
-    },
-    {
-        id: 10,
-        title: "Сумка тоут",
-        price: 4490,
-        category: "accessories",
-        image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400",
-        description: "Вместительная сумка-тоут. Натуральная кожа, минималистичный дизайн.",
-        sizes: ["One Size"]
-    },
-    {
-        id: 11,
-        title: "Худи базовое",
-        price: 3490,
-        category: "tops",
-        image: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=400",
-        description: "Классическое худи из плотного хлопка. Удобство и стиль в каждой детали.",
-        sizes: ["S", "M", "L", "XL", "XXL"]
-    },
-    {
-        id: 12,
-        title: "Ботинки челси",
-        price: 9990,
-        category: "shoes",
-        image: "https://images.unsplash.com/photo-1608256246200-53e632e0e56b?w=400",
-        description: "Стильные ботинки челси. Натуральная замша, удобная колодка.",
-        sizes: ["37", "38", "39", "40", "41", "42"]
-    },
-    {
-        id: 13,
         title: "🔥 Ботинки Cumpus с мехом",
         price: 70000,
         category: "shoes",
         image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
-        description: "Премиальные зимние ботинки Cumpus с натуральным мехом. Максимальное тепло и комфорт в любую погоду. В наличии.",
-        sizes: ["38", "39", "40", "41", "42", "43"]
+        description: "Премиальные зимние ботинки с натуральным мехом",
+        sizes: ["38", "39", "40", "41", "42", "43"],
+        in_stock: true
     },
     {
-        id: 14,
+        id: 6,
         title: "💰 Кофта Dragon Money",
         price: 15000,
         category: "tops",
         image: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=400",
-        description: "Стильная кофта Dragon Money с эксклюзивным принтом. Премиальное качество, лимитированная серия. В наличии.",
-        sizes: ["S", "M", "L", "XL"]
+        description: "Стильная кофта с эксклюзивным принтом",
+        sizes: ["S", "M", "L", "XL"],
+        in_stock: true
     }
 ];
 
@@ -164,20 +100,22 @@ const cartModal = document.getElementById('cartModal');
 
 // Загрузка товаров с API
 async function loadProducts() {
+    // Если API_URL = null, используем локальные данные
+    if (!API_URL) {
+        products = defaultProducts;
+        renderProducts();
+        return;
+    }
+    
     try {
-        console.log('Загрузка товаров из API:', API_URL);
         const response = await fetch(`${API_URL}/products`);
         if (response.ok) {
             const data = await response.json();
             products = data.products || [];
-            console.log('Загружено товаров:', products.length);
         } else {
-            console.warn('API вернул ошибку, используем локальные товары');
             products = defaultProducts;
         }
     } catch (error) {
-        console.error('API недоступен:', error);
-        console.log('Используем локальные товары');
         products = defaultProducts;
     }
     renderProducts();
