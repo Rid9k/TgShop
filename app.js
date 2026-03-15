@@ -15,7 +15,7 @@ document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', '#16
 // Для продакшена на Render: "https://your-app.onrender.com"
 
 // ВРЕМЕННО ОТКЛЮЧЕНО — используем только defaultProducts
-const API_URL = "http://91.197.99.231:8000";
+const API_URL = "https://texture-murphy-roll-twins.trycloudflare.com";
 
 // Данные товаров (загружаются с API или используются локальные)
 let products = [];
