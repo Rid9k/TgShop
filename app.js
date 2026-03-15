@@ -13,7 +13,7 @@ document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', '#16
 // URL API (замените на ваш URL после деплоя)
 // Для локального тестирования: "http://localhost:8000"
 // Для продакшена: "https://your-app.onrender.com"
-const API_URL = "http://localhost:8000";
+const API_URL = "http://91.197.99.231:8000";
 
 // Данные товаров (загружаются с API или используются локальные)
 let products = [];
