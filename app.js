@@ -175,7 +175,7 @@ searchInput.addEventListener('input', (e) => {
 // Открытие модального окна товара
 function openProductModal(product) {
     selectedProduct = product;
-    selectedSize = null;
+    selectedSize = "One Size";  // ✅ Размер по умолчанию
 
     document.getElementById('modalImage').src = product.image || 'https://via.placeholder.com/400x300';
     document.getElementById('modalImage').onerror = function() {
@@ -185,19 +185,11 @@ function openProductModal(product) {
     document.getElementById('modalPrice').textContent = `${product.price.toLocaleString()} ₽`;
     document.getElementById('modalDescription').textContent = product.description || '';
 
-    const sizeSelector = document.getElementById('sizeSelector');
-    sizeSelector.innerHTML = '';
-    
-    const sizes = product.sizes || ["S", "M", "L", "XL"];
-    sizes.forEach(size => {
-        const btn = document.createElement('button');
-        btn.className = 'size-btn';
-        btn.textContent = size;
-        btn.onclick = () => selectSize(size, btn);
-        sizeSelector.appendChild(btn);
-    });
+    // ❌ Удаляем выбор размера
+    document.getElementById('sizeSelector').innerHTML = '';
 
     productModal.style.display = 'block';
+}
 }
 
 // Выбор размера
@@ -217,14 +209,10 @@ function closeModal() {
 // Добавление в корзину
 function addToCart() {
     if (!selectedProduct) return;
-    if (!selectedSize) {
-        tg.showAlert('Пожалуйста, выберите размер');
-        return;
-    }
 
     cart.push({
         ...selectedProduct,
-        selectedSize
+        selectedSize: "One Size"  // ✅ Размер по умолчанию
     });
 
     updateCartCount();
