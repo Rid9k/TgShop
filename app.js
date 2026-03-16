@@ -188,7 +188,7 @@ function openProductModal(product) {
     // Скрываем выбор размера
     const sizeSelector = document.getElementById('sizeSelector');
     if (sizeSelector) {
-        sizeSelector.innerHTML = '<span style="opacity:0.6">Размер не требуется</span>';
+        sizeSelector.innerHTML = '<span style="opacity:0.6"></span>';
     }
 
     productModal.style.display = 'block';
