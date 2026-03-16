@@ -175,7 +175,7 @@ searchInput.addEventListener('input', (e) => {
 // Открытие модального окна товара
 function openProductModal(product) {
     selectedProduct = product;
-    selectedSize = "One Size";  // ✅ Размер по умолчанию
+    selectedSize = "One Size";
 
     document.getElementById('modalImage').src = product.image || 'https://via.placeholder.com/400x300';
     document.getElementById('modalImage').onerror = function() {
@@ -185,11 +185,13 @@ function openProductModal(product) {
     document.getElementById('modalPrice').textContent = `${product.price.toLocaleString()} ₽`;
     document.getElementById('modalDescription').textContent = product.description || '';
 
-    // ❌ Удаляем выбор размера
-    document.getElementById('sizeSelector').innerHTML = '';
+    // Скрываем выбор размера
+    const sizeSelector = document.getElementById('sizeSelector');
+    if (sizeSelector) {
+        sizeSelector.innerHTML = '<span style="opacity:0.6">Размер не требуется</span>';
+    }
 
     productModal.style.display = 'block';
-}
 }
 
 // Выбор размера
@@ -212,16 +214,19 @@ function addToCart() {
 
     cart.push({
         ...selectedProduct,
-        selectedSize: "One Size"  // ✅ Размер по умолчанию
+        selectedSize: "One Size"
     });
 
     updateCartCount();
     closeModal();
-    tg.showNotification({
-        type: 'success',
-        title: 'Добавлено в корзину',
-        duration: 2000
-    });
+    
+    if (tg.showNotification) {
+        tg.showNotification({
+            type: 'success',
+            title: 'Добавлено в корзину',
+            duration: 2000
+        });
+    }
 }
 
 // Обновление счётчика корзины
