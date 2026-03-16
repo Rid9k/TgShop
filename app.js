@@ -108,7 +108,7 @@ async function loadProducts() {
     }
     
     try {
-        const response = await fetch(`${API_URL}/products`);
+        const response = await fetch('https://raw.githubusercontent.com/rid9k/TgShop/main/products.json');
         if (response.ok) {
             const data = await response.json();
             products = data.products || [];
