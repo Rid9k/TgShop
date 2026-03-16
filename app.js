@@ -9,18 +9,15 @@ document.documentElement.style.setProperty('--tg-theme-text-color', '#ffffff');
 document.documentElement.style.setProperty('--tg-theme-button-color', '#2ea043');
 document.documentElement.style.setProperty('--tg-theme-button-text-color', '#ffffff');
 document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', '#161b22');
+document.documentElement.style.setProperty('--tg-theme-hint-color', '#8b949e');
 
-// URL API (замените на ваш URL после деплоя)
-// Для локального тестирования: "http://localhost:8000"
-// Для продакшена на Render: "https://your-app.onrender.com"
+// URL API
+const API_URL = "http://91.197.99.231:8000";
 
-// ВРЕМЕННО ОТКЛЮЧЕНО — используем только defaultProducts
-const API_URL = "https://texture-murphy-roll-twins.trycloudflare.com";
-
-// Данные товаров (загружаются с API или используются локальные)
+// Данные товаров
 let products = [];
 
-// Локальные товары (основные данные из БД)
+// Локальные товары (резервные данные)
 const defaultProducts = [
     {
         id: 1,
@@ -97,31 +94,35 @@ const cartFloat = document.getElementById('cartFloat');
 const cartCount = document.getElementById('cartCount');
 const productModal = document.getElementById('productModal');
 const cartModal = document.getElementById('cartModal');
+const checkoutModal = document.getElementById('checkoutModal');
 
-// Загрузка товаров с API
+// ========== ЗАГРУЗКА И ОТОБРАЖЕНИЕ ТОВАРОВ ==========
+
 async function loadProducts() {
-    // Если API_URL = null, используем локальные данные
     if (!API_URL) {
         products = defaultProducts;
         renderProducts();
         return;
     }
-    
+
     try {
-        const response = await fetch('https://raw.githubusercontent.com/rid9k/TgShop/main/products.json');
+        const response = await fetch(`${API_URL}/products`);
         if (response.ok) {
             const data = await response.json();
             products = data.products || [];
+            if (products.length === 0) {
+                products = defaultProducts;
+            }
         } else {
             products = defaultProducts;
         }
     } catch (error) {
+        console.error('Ошибка загрузки товаров:', error);
         products = defaultProducts;
     }
     renderProducts();
 }
 
-// Отображение товаров
 function renderProducts(filterText = '') {
     productsGrid.innerHTML = '';
 
@@ -132,7 +133,7 @@ function renderProducts(filterText = '') {
     });
 
     if (filtered.length === 0) {
-        productsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; opacity: 0.6;">Товары не найдены</p>';
+        productsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; opacity: 0.6; color: var(--tg-theme-hint-color);">Товары не найдены</p>';
         return;
     }
 
@@ -140,9 +141,9 @@ function renderProducts(filterText = '') {
         const card = document.createElement('div');
         card.className = 'product-card';
         card.onclick = () => openProductModal(product);
-        
-        const stockBadge = product.in_stock ? '' : '<div style="position:absolute;top:8px;right:8px;background:#ff4444;color:white;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:bold;">НЕТ</div>';
-        
+
+        const stockBadge = product.in_stock ? '' : '<div style="position:absolute;top:8px;right:8px;background:var(--tg-theme-danger-color);color:white;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:bold;">НЕТ</div>';
+
         card.innerHTML = `
             <div style="position:relative">
                 <img src="${product.image}" alt="${product.title}" class="product-image" onerror="this.src='https://via.placeholder.com/400x300?text=No+Image'">
@@ -157,7 +158,8 @@ function renderProducts(filterText = '') {
     });
 }
 
-// Переключение категорий
+// ========== КАТЕГОРИИ И ПОИСК ==========
+
 document.querySelectorAll('.category-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
@@ -167,15 +169,15 @@ document.querySelectorAll('.category-btn').forEach(btn => {
     });
 });
 
-// Поиск
 searchInput.addEventListener('input', (e) => {
     renderProducts(e.target.value);
 });
 
-// Открытие модального окна товара
+// ========== МОДАЛЬНОЕ ОКНО ТОВАРА ==========
+
 function openProductModal(product) {
     selectedProduct = product;
-    selectedSize = "One Size";
+    selectedSize = null;
 
     document.getElementById('modalImage').src = product.image || 'https://via.placeholder.com/400x300';
     document.getElementById('modalImage').onerror = function() {
@@ -185,64 +187,76 @@ function openProductModal(product) {
     document.getElementById('modalPrice').textContent = `${product.price.toLocaleString()} ₽`;
     document.getElementById('modalDescription').textContent = product.description || '';
 
-    // Скрываем выбор размера
     const sizeSelector = document.getElementById('sizeSelector');
-    if (sizeSelector) {
-        sizeSelector.innerHTML = '<span style="opacity:0.6"></span>';
-    }
+    sizeSelector.innerHTML = '';
+
+    const sizes = product.sizes || ["S", "M", "L", "XL"];
+    sizes.forEach(size => {
+        const btn = document.createElement('button');
+        btn.className = 'size-btn';
+        btn.textContent = size;
+        btn.onclick = () => selectSize(size, btn);
+        sizeSelector.appendChild(btn);
+    });
 
     productModal.style.display = 'block';
 }
 
-// Выбор размера
 function selectSize(size, btn) {
     selectedSize = size;
     document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
 }
 
-// Закрытие модального окна товара
 function closeModal() {
     productModal.style.display = 'none';
     selectedProduct = null;
     selectedSize = null;
 }
 
-// Добавление в корзину
 function addToCart() {
     if (!selectedProduct) return;
+    if (!selectedSize) {
+        tg.showAlert('Пожалуйста, выберите размер');
+        return;
+    }
 
     cart.push({
         ...selectedProduct,
-        selectedSize: "One Size"
+        selectedSize
     });
 
     updateCartCount();
     closeModal();
     
-    if (tg.showNotification) {
-        tg.showNotification({
-            type: 'success',
-            title: 'Добавлено в корзину',
-            duration: 2000
-        });
+    // Вибрация при добавлении
+    if (tg.HapticFeedback) {
+        tg.HapticFeedback.notificationOccurred('success');
     }
+    
+    tg.showNotification({
+        type: 'success',
+        title: 'Добавлено в корзину',
+        duration: 2000
+    });
 }
 
-// Обновление счётчика корзины
+// ========== КОРЗИНА ==========
+
 function updateCartCount() {
     cartCount.textContent = cart.length;
     if (cart.length > 0) {
         cartFloat.style.display = 'flex';
+    } else {
+        cartFloat.style.display = 'none';
     }
 }
 
-// Открытие корзины
 function showCart() {
     const cartItems = document.getElementById('cartItems');
 
     if (cart.length === 0) {
-        cartItems.innerHTML = '<p class="empty-cart">Корзина пуста</p>';
+        cartItems.innerHTML = '<p class="empty-cart">📦 Корзина пуста</p>';
     } else {
         cartItems.innerHTML = cart.map((item, index) => `
             <div class="cart-item">
@@ -263,51 +277,239 @@ function showCart() {
     cartModal.style.display = 'block';
 }
 
-// Удаление из корзины
 function removeFromCart(index) {
     cart.splice(index, 1);
     updateCartCount();
-    showCart();
+    
+    if (cart.length === 0) {
+        closeCart();
+    } else {
+        showCart();
+    }
+    
+    if (tg.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
 }
 
-// Закрытие корзины
 function closeCart() {
     cartModal.style.display = 'none';
 }
 
-// Оформление заказа
-function checkout() {
+// ========== ОФОРМЛЕНИЕ ЗАКАЗА ==========
+
+function showCheckoutForm() {
     if (cart.length === 0) {
         tg.showAlert('Корзина пуста');
         return;
     }
 
+    // Заполняем резюме заказа
+    const orderSummary = document.getElementById('orderSummary');
+    orderSummary.innerHTML = cart.map(item => `
+        <div class="order-item">
+            <div>
+                <div class="order-item-name">${item.title}</div>
+                <div class="order-item-size">Размер: ${item.selectedSize}</div>
+            </div>
+            <div class="order-item-price">${item.price.toLocaleString()} ₽</div>
+        </div>
+    `).join('');
+
     const total = cart.reduce((sum, item) => sum + item.price, 0);
-    const orderText = cart.map(item => `${item.title} (${item.selectedSize}) - ${item.price.toLocaleString()} ₽`).join('\n');
+    document.getElementById('orderTotal').textContent = total.toLocaleString();
 
-    const message = `🛒 Новый заказ:\n\n${orderText}\n\n💰 Итого: ${total.toLocaleString()} ₽`;
+    // Сбрасываем форму
+    document.getElementById('contactInput').value = '';
+    document.getElementById('agreeCheckbox').checked = false;
+    document.getElementById('contactTelegram').checked = true;
+    toggleContactType();
+    
+    // Скрываем сообщения об ошибках
+    hideError();
 
-    // Отправка данных боту
-    tg.sendData(JSON.stringify({
-        type: 'order',
-        items: cart,
-        total: total
-    }));
-
-    // Очистка корзины
-    cart = [];
-    updateCartCount();
-    closeCart();
-
-    tg.showConfirm(`Заказ оформлен!\n\n${message}\n\nМенеджер свяжется с вами в ближайшее время.`);
+    cartModal.style.display = 'none';
+    checkoutModal.style.display = 'block';
 }
 
-// Закрытие модальных окон по клику вне контента
+function closeCheckoutForm() {
+    checkoutModal.style.display = 'none';
+}
+
+function toggleContactType() {
+    const isTelegram = document.getElementById('contactTelegram').checked;
+    const contactInput = document.getElementById('contactInput');
+    const contactHint = document.getElementById('contactHint');
+    
+    if (isTelegram) {
+        contactInput.placeholder = '@username или ссылка на профиль';
+        contactHint.textContent = 'Введите ваш @username или ссылку на Telegram профиль';
+    } else {
+        contactInput.placeholder = '+7 (999) 000-00-00';
+        contactHint.textContent = 'Введите номер телефона в любом формате';
+    }
+}
+
+function showError(message) {
+    let errorEl = document.querySelector('.error-message');
+    if (!errorEl) {
+        errorEl = document.createElement('div');
+        errorEl.className = 'error-message';
+        document.querySelector('.checkout-content h2').insertAdjacentElement('afterend', errorEl);
+    }
+    errorEl.textContent = message;
+    errorEl.classList.add('show');
+}
+
+function hideError() {
+    const errorEl = document.querySelector('.error-message');
+    if (errorEl) {
+        errorEl.classList.remove('show');
+    }
+}
+
+function validateContact(contact, type) {
+    if (!contact || contact.trim().length === 0) {
+        return { valid: false, message: 'Введите контактные данные' };
+    }
+    
+    if (type === 'telegram') {
+        // Проверка Telegram username или ссылки
+        const usernamePattern = /^@?[a-zA-Z0-9_]{3,32}$/;
+        const linkPattern = /^(https?:\/\/)?(t\.me\/|telegram\.me\/)?@?[a-zA-Z0-9_]{3,32}$/;
+        
+        if (usernamePattern.test(contact) || linkPattern.test(contact)) {
+            return { valid: true };
+        }
+        return { valid: false, message: 'Неверный формат Telegram. Пример: @username или username' };
+    } else {
+        // Проверка телефона
+        const phonePattern = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
+        const digitsOnly = contact.replace(/\D/g, '');
+        
+        if (digitsOnly.length >= 10 && digitsOnly.length <= 15 && phonePattern.test(contact)) {
+            return { valid: true };
+        }
+        return { valid: false, message: 'Неверный формат телефона. Пример: +7 (999) 000-00-00' };
+    }
+}
+
+function submitOrder() {
+    if (cart.length === 0) {
+        showError('Корзина пуста');
+        return;
+    }
+
+    const contactType = document.querySelector('input[name="contactType"]:checked').value;
+    const contact = document.getElementById('contactInput').value.trim();
+    const agreeCheckbox = document.getElementById('agreeCheckbox');
+
+    // Валидация контакта
+    const validation = validateContact(contact, contactType);
+    if (!validation.valid) {
+        showError(validation.message);
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('error');
+        }
+        return;
+    }
+
+    // Проверка согласия
+    if (!agreeCheckbox.checked) {
+        showError('Необходимо согласие на обработку персональных данных');
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('error');
+        }
+        return;
+    }
+
+    hideError();
+
+    // Формирование данных заказа
+    const total = cart.reduce((sum, item) => sum + item.price, 0);
+    const now = new Date();
+    const formattedDate = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}.${String(now.getHours()).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const orderData = {
+        type: 'order',
+        contactType: contactType,
+        contact: contact,
+        items: cart.map(item => ({
+            id: item.id,
+            title: item.title,
+            price: item.price,
+            selectedSize: item.selectedSize,
+            category: item.category
+        })),
+        total: total,
+        timestamp: formattedDate,
+        customer: {
+            tgId: tg.initDataUnsafe?.user?.id,
+            username: tg.initDataUnsafe?.user?.username,
+            firstName: tg.initDataUnsafe?.user?.first_name,
+            lastName: tg.initDataUnsafe?.user?.last_name,
+            contact: contact,
+            contactType: contactType
+        }
+    };
+
+    // Отправка данных боту
+    tg.sendData(JSON.stringify(orderData));
+
+    // Показываем успех
+    if (tg.HapticFeedback) {
+        tg.HapticFeedback.notificationOccurred('success');
+    }
+
+    // Очистка и закрытие
+    cart = [];
+    updateCartCount();
+    closeCheckoutForm();
+
+    // Показываем сообщение об успехе
+    showSuccessMessage();
+}
+
+function showSuccessMessage() {
+    const successHtml = `
+        <div class="modal" id="successModal" style="display: block;">
+            <div class="modal-content" style="text-align: center; padding: 40px 24px;">
+                <div style="font-size: 64px; margin-bottom: 20px;">✅</div>
+                <h2 style="margin-bottom: 12px;">Заказ оформлен!</h2>
+                <p style="color: var(--tg-theme-hint-color); margin-bottom: 24px; line-height: 1.6;">
+                    Спасибо за заказ! Наш менеджер свяжется с вами в ближайшее время для уточнения деталей доставки.
+                </p>
+                <button class="checkout-btn" onclick="document.getElementById('successModal').remove(); tg.close();" style="max-width: 200px;">
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', successHtml);
+}
+
+// ========== ОБРАБОТКА КЛИКОВ ==========
+
 window.onclick = (event) => {
     if (event.target === productModal) closeModal();
     if (event.target === cartModal) closeCart();
+    if (event.target === checkoutModal) closeCheckoutForm();
 };
 
-// Инициализация
+// ========== ИНИЦИАЛИЗАЦИЯ ==========
+
 loadProducts();
 updateCartCount();
+
+// Экспорт функций для глобального доступа
+window.toggleContactType = toggleContactType;
+window.showCheckoutForm = showCheckoutForm;
+window.closeCheckoutForm = closeCheckoutForm;
+window.submitOrder = submitOrder;
+window.showCart = showCart;
+window.closeCart = closeCart;
+window.removeFromCart = removeFromCart;
+window.addToCart = addToCart;
+window.selectSize = selectSize;
+window.closeModal = closeModal;
+window.openProductModal = openProductModal;
