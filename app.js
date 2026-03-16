@@ -186,6 +186,29 @@ function showCart() {
     }
 
     const total = cart.reduce((sum, item) => sum + item.price, 0);
+        const total = cart.reduce((sum, item) => sum + item.price, 0);
+    document.getElementById('cartTotal').textContent = total.toLocaleString();
+
+    // 🔥 ДОБАВЬТЕ ЭТОТ КОД (поле для контакта) 🔥
+    const contactSection = document.getElementById('contactSection');
+    if (!contactSection) {
+        const contactHtml = `
+            <div id="contactSection" style="margin-top:20px;padding-top:20px;border-top:1px solid #30363d;">
+                <label style="display:block;margin-bottom:8px;font-weight:600;color:#c9d1d9;">📱 Ваш контакт (обязательно)</label>
+                <input type="text" id="customerContact" placeholder="@username или +7 999 123-45-67" 
+                    style="width:100%;padding:12px;border:1px solid #30363d;border-radius:8px;background:#0d1117;color:#ffffff;font-size:16px;outline:none;">
+                <p id="contactError" style="color:#ff4444;font-size:14px;margin-top:8px;display:none;">⚠️ Введите @username или номер телефона</p>
+            </div>
+        `;
+        const checkoutBtn = document.querySelector('.checkout-btn');
+        if (checkoutBtn) {
+            checkoutBtn.insertAdjacentHTML('beforebegin', contactHtml);
+        }
+    }
+    // 🔥 КОНЕЦ ДОБАВЛЕННОГО КОДА 🔥
+
+    cartModal.style.display = 'block';
+}
     document.getElementById('cartTotal').textContent = total.toLocaleString();
 
     // Поле для контакта
@@ -242,13 +265,15 @@ function checkout() {
     }
 
     // Проверка контакта
-    const contact = document.getElementById('customerContact').value.trim();
-    if (!contact) {
+    const contact = document.getElementById('customerContact');
+    const contactValue = contact ? contact.value.trim() : '';
+    
+    if (!contactValue) {
         tg.showAlert('Пожалуйста, введите ваш Telegram @username или номер телефона');
         return;
     }
 
-    const isValid = contact.startsWith('@') || /^\+?\d[\d\s-]{8,}$/.test(contact);
+    const isValid = contactValue.startsWith('@') || /^\+?\d[\d\s-]{8,}$/.test(contactValue);
     if (!isValid) {
         tg.showAlert('Пожалуйста, введите корректный @username или номер телефона');
         return;
@@ -262,16 +287,12 @@ function checkout() {
     
     const orderText = cart.map(item => `${item.title} — ${item.price.toLocaleString()} ₽`).join('\n');
 
-    const message = `🛒 **Новый заказ!**\n\n` +
-        `👤 **Контакт:** ${contact}\n` +
-        `📅 **Дата:** ${dateStr}\n\n` +
-        `**Товары:**\n${orderText}\n\n` +
-        `💰 **Итого:** ${total.toLocaleString()} ₽`;
+    const message = `🛒 Новый заказ!\n\n👤 Контакт: ${contactValue}\n📅 Дата: ${dateStr}\n\nТовары:\n${orderText}\n\n💰 Итого: ${total.toLocaleString()} ₽`;
 
     // Отправка данных боту
     tg.sendData(JSON.stringify({
         type: 'order',
-        contact: contact,
+        contact: contactValue,
         items: cart,
         total: total,
         date: dateStr
@@ -282,7 +303,7 @@ function checkout() {
     updateCartCount();
     closeCart();
 
-    tg.showAlert(`✅ **Заказ оформлен!**\n\n${message}\n\nМенеджер свяжется с вами в ближайшее время.`);
+    tg.showAlert('✅ Заказ оформлен!\n\nМенеджер свяжется с вами в ближайшее время.');
 }
 
 // Закрытие модальных окон по клику вне контента
